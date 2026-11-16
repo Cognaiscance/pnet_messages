@@ -1,0 +1,11 @@
+{
+  "id": "messages",
+  "name": "Messages",
+  "summary": "One person writes to another. The client only displays. Each user's server stores the messages and delivers them to the other person's server.",
+  "placement": "messages-client on every device. messages-server on server-grade nodes; only the top-ranked one stores messages.",
+  "os": "Linux (v1)",
+  "fabric_alias_client": "messages-client",
+  "fabric_alias_server": "messages-server",
+  "web_slug": "messages",
+  "protocol": "application/messages"
+}

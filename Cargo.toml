@@ -1,0 +1,21 @@
+[package]
+name = "pnet_messages"
+version = "0.1.0"
+edition = "2021"
+description = "Person-to-person messages over pNet. The client shows them. Each user's server stores them and delivers to the other person's server."
+
+[dependencies]
+log = "0.4"
+flexi_logger = "0.31"
+
+[lib]
+name = "pnet_messages"
+path = "src/lib.rs"
+
+[[bin]]
+name = "messages-client"
+path = "src/bin/messages-client.rs"
+
+[[bin]]
+name = "messages-server"
+path = "src/bin/messages-server.rs"
