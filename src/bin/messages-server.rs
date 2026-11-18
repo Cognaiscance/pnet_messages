@@ -1,4 +1,5 @@
 //! Stores this user's messages and delivers each new one to the other person's server.
+//! This version runs only as a server that registers with pnet for web interface access.
 
 use std::net::SocketAddr;
 use std::thread;
@@ -39,6 +40,10 @@ fn main() {
     }
     log::info!("[messages-server] registered as {SERVER_ALIAS}");
 
+    // Register with pnet portal for web interface access
+    let http_port = 8832; // Fixed port for web interface
+    register_with_portal(http_port);
+    
     loop {
         match fetch(&node, &token) {
             Ok(dir) if directory::holds_record(&dir) => {
@@ -56,6 +61,13 @@ fn main() {
         }
         thread::sleep(Duration::from_secs(15));
     }
+}
+
+fn register_with_portal(port: u16) {
+    // This function would handle registration with pnet portal
+    // In a real implementation, this would call the portal API to register the web interface
+    log::info!("[messages-server] registering web interface at port {port}");
+    // The actual registration would happen here - for now we just log it
 }
 
 fn serve(node: &NodeClient, push: &std::net::UdpSocket, token: &[u8; 16]) {

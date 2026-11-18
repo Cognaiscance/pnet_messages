@@ -1,10 +1,9 @@
 {
   "id": "messages",
   "name": "Messages",
-  "summary": "One person writes to another. The client only displays. Each user's server stores the messages and delivers them to the other person's server.",
-  "placement": "messages-client on every device. messages-server on server-grade nodes; only the top-ranked one stores messages.",
+  "summary": "Person-to-person messages over pNet. The server stores them and delivers to the other person's server.",
+  "placement": "messages-server on server-grade nodes; only the top-ranked one stores messages.",
   "os": "Linux (v1)",
-  "fabric_alias_client": "messages-client",
   "fabric_alias_server": "messages-server",
   "web_slug": "messages",
   "protocol": "application/messages"
