@@ -148,25 +148,48 @@ pub fn render(
              });\
            });\
            var stream = document.getElementById(\"stream\");\
-           if (stream) stream.scrollTop = stream.scrollHeight;\
            var fmt = new Intl.DateTimeFormat(undefined, { hour: \"numeric\", minute: \"2-digit\" });\
            var day = new Intl.DateTimeFormat(undefined, { weekday: \"long\", month: \"long\", day: \"numeric\" });\
-           var last = \"\";\
-           document.querySelectorAll(\"article.msg\").forEach(function (el) {\
-             var time = el.querySelector(\"time\");\
-             var ms = Number(time && time.getAttribute(\"data-ms\"));\
-             if (!Number.isFinite(ms)) return;\
-             var when = new Date(ms);\
-             time.textContent = fmt.format(when);\
-             var label = day.format(when);\
-             if (label !== last) {\
-               var sep = document.createElement(\"div\");\
-               sep.className = \"day\";\
-               sep.textContent = label;\
-               el.parentNode.insertBefore(sep, el);\
-               last = label;\
-             }\
-           });\
+           function paintTimes(root) {\
+             var last = \"\";\
+             root.querySelectorAll(\".day\").forEach(function (sep) { sep.remove(); });\
+             root.querySelectorAll(\"article.msg\").forEach(function (el) {\
+               var time = el.querySelector(\"time\");\
+               var ms = Number(time && time.getAttribute(\"data-ms\"));\
+               if (!Number.isFinite(ms)) return;\
+               var when = new Date(ms);\
+               time.textContent = fmt.format(when);\
+               var label = day.format(when);\
+               if (label !== last) {\
+                 var sep = document.createElement(\"div\");\
+                 sep.className = \"day\";\
+                 sep.textContent = label;\
+                 el.parentNode.insertBefore(sep, el);\
+                 last = label;\
+               }\
+             });\
+           }\
+           function stamp(root) {\
+             return Array.prototype.map.call(root.querySelectorAll(\"article.msg\"), function (el) {\
+               var time = el.querySelector(\"time\");\
+               var text = el.querySelector(\"p\");\
+               return (time ? time.getAttribute(\"data-ms\") : \"\") + \"\\n\" + (text ? text.textContent : \"\");\
+             }).join(\"\\n\");\
+           }\
+           if (stream) {\
+             paintTimes(stream);\
+             stream.scrollTop = stream.scrollHeight;\
+             setInterval(function () {\
+               fetch(location.href, { cache: \"no-store\" }).then(function (res) { return res.text(); }).then(function (html) {\
+                 var next = new DOMParser().parseFromString(html, \"text/html\").getElementById(\"stream\");\
+                 if (!next || stamp(next) === stamp(stream)) return;\
+                 var atBottom = stream.scrollHeight - stream.scrollTop - stream.clientHeight < 48;\
+                 stream.innerHTML = next.innerHTML;\
+                 paintTimes(stream);\
+                 if (atBottom) stream.scrollTop = stream.scrollHeight;\
+               }).catch(function () {});\
+             }, 2000);\
+           }\
            var box = document.querySelector(\"textarea\");\
            if (box) box.addEventListener(\"keydown\", function (ev) {\
              if (ev.key === \"Enter\" && !ev.shiftKey) { ev.preventDefault(); box.form.requestSubmit(); }\
@@ -349,5 +372,7 @@ mod tests {
         assert!(html.contains("hello &lt;there&gt;"));
         assert!(!html.contains("theme-toggle"));
         assert!(html.contains("raw=1"));
+        assert!(html.contains("setInterval"));
+        assert!(html.contains("getElementById(\"stream\")"));
     }
 }
