@@ -2,9 +2,7 @@
 
 One person writes to another. The server stores every message and is the part that sends it on.
 
-`messages-server` runs on server-grade nodes. The top-ranked one opens `~/.pnet/messages/messages` and answers the clients. When a message is new, that server sends it to the other person's `messages-server`, which stores it for that person's clients. A server that is not the top-ranked one stands by and does not open a second file.
-
-The web interface registers with the pNet portal so it shows up on the pNet public website.
+`messages-server` runs on server-grade nodes. The top-ranked one opens `~/.pnet/messages/messages` and mounts `/apps/messages/` on that node's owner portal. The page lists this user's contacts. A send is stored here, then delivered to that contact's `messages-server`. A server that is not the top-ranked one stands by and does not open a second file.
 
 | | |
 |---|---|

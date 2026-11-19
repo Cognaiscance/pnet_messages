@@ -1,4 +1,4 @@
-//! The client page. It draws whatever the server just returned.
+//! The messages page. The storing server draws it from the message file and the contact list.
 
 use crate::store::{self, Message};
 

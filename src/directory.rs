@@ -3,7 +3,7 @@
 //! Layout matches pNet's app get-data encoder. Certificate fields sit between
 //! a device's host list and its app list.
 
-use crate::{CLIENT_ALIAS, SERVER_ALIAS};
+use crate::SERVER_ALIAS;
 use std::fmt;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -297,25 +297,6 @@ pub fn contact_by_id<'a>(dir: &'a Directory, user: &[u8; 16]) -> Option<&'a Cont
     dir.contacts.iter().find(|contact| contact.id == *user)
 }
 
-pub fn own_device_of_app(dir: &Directory, app: &[u8; 16]) -> Option<[u8; 16]> {
-    dir.own_devices.iter().find_map(|device| {
-        device
-            .apps
-            .iter()
-            .any(|candidate| candidate.id == *app)
-            .then_some(device.id)
-    })
-}
-
-/// Approved `messages-client` on one of this user's own devices.
-pub fn approved_own_client(dir: &Directory, app: &[u8; 16]) -> bool {
-    dir.own_devices.iter().any(|device| {
-        device.apps.iter().any(|candidate| {
-            candidate.id == *app && candidate.approved && candidate.alias == CLIENT_ALIAS
-        })
-    })
-}
-
 pub fn alias_for(dir: &Directory, user: &[u8; 16]) -> String {
     if *user == dir.owner_id {
         return dir.owner_alias.clone();
@@ -372,12 +353,10 @@ mod tests {
 
         buf.push(2);
         push_device(&mut buf, [0xA1; 16], "n64", 1, 1);
-        buf.push(2);
-        push_own_app(&mut buf, [0x11; 16], SERVER_ALIAS, 8831, true);
-        push_own_app(&mut buf, [0x31; 16], CLIENT_ALIAS, 8830, true);
-        push_device(&mut buf, [0xA2; 16], "laptop", 0, 0);
         buf.push(1);
-        push_own_app(&mut buf, [0x32; 16], CLIENT_ALIAS, 8830, true);
+        push_own_app(&mut buf, [0x11; 16], SERVER_ALIAS, 8831, true);
+        push_device(&mut buf, [0xA2; 16], "laptop", 0, 0);
+        buf.push(0);
 
         buf.push(1);
         push_str(&mut buf, "chad");
@@ -387,8 +366,7 @@ mod tests {
         buf.push(1);
         push_contact_app(&mut buf, [0x41; 16], SERVER_ALIAS);
         push_device(&mut buf, [0xD2; 16], "phone", 0, 0);
-        buf.push(1);
-        push_contact_app(&mut buf, [0x42; 16], CLIENT_ALIAS);
+        buf.push(0);
         buf
     }
 
@@ -409,7 +387,7 @@ mod tests {
             contact_of_server_app(&dir, &[0x41; 16]).unwrap().alias,
             "chad"
         );
-        assert!(approved_own_client(&dir, &[0x32; 16]));
-        assert!(!approved_own_client(&dir, &[0x42; 16]));
+        assert!(contact_by_id(&dir, &[0xC1; 16]).is_some());
+        assert!(contact_by_id(&dir, &[0xFF; 16]).is_none());
     }
 }

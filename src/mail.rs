@@ -1,18 +1,11 @@
-//! What the server does with one client post or one delivery.
+//! What the server does with one send from the page or one delivery.
 //!
-//! The client posts to its own server. That server stores the message, then
-//! delivers the same bytes to the other person's server. The other server
-//! stores them for that person's clients.
+//! The page writes a message for a contact. This server stores it, then
+//! delivers the same bytes to that contact's server. The other server stores
+//! them for that person's page.
 
-use crate::proto::{self, Frame, Post, ACK_OK, ACK_REJECTED};
+use crate::proto;
 use crate::store::{Message, Store, StoreError};
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Accept {
-    pub ack: Vec<u8>,
-    /// Present only the first time this id is stored.
-    pub deliver: Option<Message>,
-}
 
 pub fn now_ms() -> u64 {
     std::time::SystemTime::now()
@@ -22,34 +15,31 @@ pub fn now_ms() -> u64 {
 }
 
 /// Store a message this user is sending. Empty text is refused.
-pub fn accept_post(
+/// `Some` only the first time this id is stored.
+pub fn accept_send(
     store: &mut Store,
     owner: &[u8; 16],
-    post: &Post,
+    id: [u8; 16],
+    to_user: [u8; 16],
+    text: &str,
     at_ms: u64,
-) -> Result<Accept, StoreError> {
-    if !proto::is_text(&post.text) || post.to_user == *owner || post.to_user == [0u8; 16] {
-        return Ok(Accept {
-            ack: ack(post.id, ACK_REJECTED),
-            deliver: None,
-        });
+) -> Result<Option<Message>, StoreError> {
+    if !proto::is_text(text) || to_user == *owner || to_user == [0u8; 16] {
+        return Ok(None);
     }
     let before = store.messages().len();
     let saved = store
         .insert(Message {
-            id: post.id,
+            id,
             from_user: *owner,
-            to_user: post.to_user,
+            to_user,
             at_ms,
-            text: post.text.clone(),
+            text: text.to_string(),
             delivered: false,
         })?
         .clone();
     let fresh = store.messages().len() > before;
-    Ok(Accept {
-        ack: ack(post.id, ACK_OK),
-        deliver: fresh.then_some(saved),
-    })
+    Ok(fresh.then_some(saved))
 }
 
 /// Store a message the other person's server delivered to this user.
@@ -69,33 +59,19 @@ pub fn accept_deliver(
     Ok(store.messages().len() > before)
 }
 
-fn ack(id: [u8; 16], status: u8) -> Vec<u8> {
-    proto::encode(&Frame::PostAck { id, status }).unwrap_or_default()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::proto::decode;
 
     #[test]
-    fn the_first_post_is_delivered_and_a_retry_is_not() {
+    fn the_first_send_is_delivered_and_a_retry_is_not() {
         let dir = std::env::temp_dir().join(format!("pnet-messages-mail-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let mut store = Store::open(&dir).unwrap();
-        let post = Post {
-            id: [7; 16],
-            to_user: [2; 16],
-            text: "hello chad".into(),
-        };
-        let first = accept_post(&mut store, &[1; 16], &post, 10).unwrap();
-        assert!(matches!(
-            decode(&first.ack),
-            Some(Frame::PostAck { status: ACK_OK, .. })
-        ));
-        assert_eq!(first.deliver.unwrap().text, "hello chad");
-        let again = accept_post(&mut store, &[1; 16], &post, 11).unwrap();
-        assert!(again.deliver.is_none());
+        let first = accept_send(&mut store, &[1; 16], [7; 16], [2; 16], "hello chad", 10).unwrap();
+        assert_eq!(first.unwrap().text, "hello chad");
+        let again = accept_send(&mut store, &[1; 16], [7; 16], [2; 16], "hello chad", 11).unwrap();
+        assert!(again.is_none());
         assert_eq!(store.messages().len(), 1);
         assert_eq!(store.messages()[0].at_ms, 10);
 
@@ -122,13 +98,8 @@ mod tests {
         ));
         let _ = std::fs::remove_dir_all(&dir);
         let mut store = Store::open(&dir).unwrap();
-        let post = Post {
-            id: [1; 16],
-            to_user: [2; 16],
-            text: " ".into(),
-        };
-        let accepted = accept_post(&mut store, &[9; 16], &post, 1).unwrap();
-        assert!(accepted.deliver.is_none());
+        let accepted = accept_send(&mut store, &[9; 16], [1; 16], [2; 16], " ", 1).unwrap();
+        assert!(accepted.is_none());
         assert!(store.messages().is_empty());
         let _ = std::fs::remove_dir_all(&dir);
     }

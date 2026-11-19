@@ -6,7 +6,7 @@ description = "Person-to-person messages over pNet. The server stores them and d
 
 [dependencies]
 log = "0.4"
-flexi_logger = "00.31"
+flexi_logger = "0.31"
 
 [lib]
 name = "pnet_messages"
